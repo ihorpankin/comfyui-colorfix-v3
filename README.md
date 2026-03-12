@@ -11,6 +11,22 @@ ComfyUI custom node extension implementing the **tile_colorfix** algorithm from 
 | ![Reference](assets/reference.png) | ![SDXL Result](assets/sdxl_result.png) | ![Flux Result](assets/flux_result.png) |
 | Input reference image | txt2img XL + ColorFix + ControlNet + Tile | txt2img Flux + ColorFix + ControlNet + LoRA |
 
+### ColorFix Effect Comparison
+
+| SDXL: With vs Without ColorFix | Flux: With vs Without ColorFix |
+|:------------------------------:|:------------------------------:|
+| ![XL ColorFix comparison](assets/xl_denois_with%20colorfix_and_without_colorfix_test.png) | ![Flux ColorFix comparison](assets/FLUX_denois_with%20colorfix_and_without_colorfix_test.png) |
+
+### ControlNet Mode Comparison
+
+| SDXL ControlNet Modes | Flux ControlNet Modes |
+|:---------------------:|:---------------------:|
+| ![XL ControlNet modes](assets/XL_controlnet_mode_test.png) | ![Flux ControlNet modes](assets/FLUX_controlnet_mode_test.png) |
+
+### Flux Blur Mode & Weight Test
+
+![Flux blur mode and weight test](assets/FLUX_blur_mode%20and%20weight_test.png)
+
 ---
 
 ## Nodes
@@ -22,6 +38,8 @@ ComfyUI custom node extension implementing the **tile_colorfix** algorithm from 
 | `Tile ColorFix Patcher` | Patches the model to apply color correction at every denoising step. Transfers low-frequency color from a reference image while preserving AI-generated detail. |
 | `Tile ColorFix+Sharp Patcher` | Same as above with additional detail enhancement via CFG sharpening. |
 | `Apply Ultimate ControlNet` | Apply ControlNet with A1111-compatible control modes (balanced / prompt / control). |
+| `Ultimate Multi-ControlNet Stack` | Build a stack of up to 3 ControlNets with per-slot on/off, strength, start/end percent, and control mode. |
+| `Apply Ultimate Multi-ControlNet` | Apply a multi-ControlNet stack to conditioning (SD/SDXL). |
 
 ### Flux
 
@@ -29,6 +47,8 @@ ComfyUI custom node extension implementing the **tile_colorfix** algorithm from 
 |------|-------------|
 | `Flux Tile ColorFix Patcher` | Base tile_colorfix for Flux models (16-channel latents). |
 | `Flux Tile ColorFix+Sharp Patcher` | Color correction + direct sharpening for Flux models. |
+| `Apply Ultimate ControlNet (FLUX)` | Apply single ControlNet with Flux-adapted control modes. |
+| `Apply Ultimate Multi-ControlNet (FLUX)` | Apply a multi-ControlNet stack to conditioning (Flux). |
 
 ---
 
@@ -106,8 +126,12 @@ comfyui-colorfix-v3/
 │   ├── colorfix_patcher.py
 │   ├── colorfix_sharp_patcher.py
 │   ├── controlnet_apply.py
+│   ├── controlnet_stack.py
+│   ├── controlnet_multi_apply.py
 │   ├── flux_colorfix_patcher.py
-│   └── flux_colorfix_sharp_patcher.py
+│   ├── flux_colorfix_sharp_patcher.py
+│   ├── flux_controlnet_apply.py
+│   └── flux_controlnet_multi_apply.py
 └── layer2_core/          # Internal algorithm
     ├── blur.py           # Box / Gaussian blur kernels
     ├── color_swap.py     # Low-frequency color transfer
