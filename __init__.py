@@ -3,7 +3,8 @@ comfyui-colorfix-v3
 ===================
 
 ComfyUI custom node extension implementing the tile_colorfix algorithm
-from A1111's ControlNet extension. Supports both SD/SDXL and Flux models.
+from A1111's ControlNet extension. Supports both SD/SDXL and Flux models
+(FLUX.1 Dev/Schnell and FLUX.3 Klein).
 
 Architecture:
     layer1_nodes/  — Visible ComfyUI nodes (model patchers)

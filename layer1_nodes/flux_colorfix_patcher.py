@@ -81,7 +81,7 @@ class FluxTileColorFixPatcher:
         "Patches Flux model with tile_colorfix color correction. "
         "Swaps low-frequency colors from reference image into generation "
         "while preserving AI-generated detail. "
-        "Designed for Flux models (16-ch latents, no CFG dependency)."
+        "Works with FLUX.1 and FLUX.3 Klein (no CFG dependency)."
     )
 
     def apply(self, model, ref_latent, blur_k, weight, blur_mode):
