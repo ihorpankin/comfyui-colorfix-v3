@@ -172,7 +172,7 @@ Color still follows position in the frame, not objects. The gown's blue lands on
 
 ##### Other models
 
-The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. These runs used the now deprecated **Flux Tile ColorFix Patcher**, plus **Tile ColorFix Patcher** for the SDXL `tile` column. **ColorFix Patcher** reproduces the Klein and Qwen Image results pixel for pixel at the matching radius; it has not been run on FLUX.1 or SDXL.
+The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. These runs used the now deprecated **Flux Tile ColorFix Patcher**, plus **Tile ColorFix Patcher** for the SDXL `tile` column. **ColorFix Patcher** reproduced them pixel for pixel at the matching radius in a spot check on each of the four models.
 
 ![Tile, AdaIN and hybrid on FLUX.1 Dev](assets/FLUX1_dev_colorfix_hybrid.png)
 
@@ -224,7 +224,7 @@ Workflow: [`test_workflows/FLUX3_klein_colorfix_geometry_api.json`](test_workflo
 
 | Node | Description |
 |------|-------------|
-| `ColorFix Patcher` | **Start here.** Tile, [AdaIN or hybrid](#keeping-the-models-geometry-adain) color transfer, with the blur radius set in image pixels so one value carries across models. Run on FLUX.3 Klein and Qwen Image 2512; not yet on FLUX.1, SDXL or other models. |
+| `ColorFix Patcher` | **Start here.** Tile, [AdaIN or hybrid](#keeping-the-models-geometry-adain) color transfer, with the blur radius set in image pixels so one value carries across models. Run on FLUX.3 Klein, Qwen Image 2512, FLUX.1 Dev and Juggernaut XL v9; other models are untested. |
 
 ### SD / SDXL
 
@@ -255,17 +255,34 @@ Workflow: [`test_workflows/FLUX3_klein_colorfix_geometry_api.json`](test_workflo
 
 Ready-to-load workflows with **ColorFix Patcher** are in [`example_workflows/`](example_workflows). They also appear in ComfyUI's template browser under this extension. Put `reference.png` from [`assets/`](assets/reference.png) in ComfyUI's `input` folder, or load your own image.
 
-| Workflow | Use it for | Status |
-|----------|------------|--------|
-| [`ColorFix_FLUX3_Klein`](example_workflows/ColorFix_FLUX3_Klein.json) | FLUX.3 Klein, unrelated reference | Run |
-| [`ColorFix_img2img_tile_FLUX3_Klein`](example_workflows/ColorFix_img2img_tile_FLUX3_Klein.json) | img2img, reference and output share a composition | Run |
-| [`ColorFix_Qwen_Image_2512`](example_workflows/ColorFix_Qwen_Image_2512.json) | Qwen Image 2512, unrelated reference | Run |
-| [`ColorFix_FLUX1_Dev`](example_workflows/ColorFix_FLUX1_Dev.json) | FLUX.1 Dev, unrelated reference | Graph validated, not run with this node |
-| [`ColorFix_SDXL`](example_workflows/ColorFix_SDXL.json) | SDXL, unrelated reference | Graph validated, not run with this node |
+| Workflow | Use it for |
+|----------|------------|
+| [`ColorFix_FLUX3_Klein`](example_workflows/ColorFix_FLUX3_Klein.json) | FLUX.3 Klein, unrelated reference |
+| [`ColorFix_img2img_tile_FLUX3_Klein`](example_workflows/ColorFix_img2img_tile_FLUX3_Klein.json) | img2img, reference and output share a composition |
+| [`ColorFix_Qwen_Image_2512`](example_workflows/ColorFix_Qwen_Image_2512.json) | Qwen Image 2512, unrelated reference |
+| [`ColorFix_FLUX1_Dev`](example_workflows/ColorFix_FLUX1_Dev.json) | FLUX.1 Dev, unrelated reference |
+| [`ColorFix_SDXL`](example_workflows/ColorFix_SDXL.json) | SDXL (Juggernaut XL v9), unrelated reference |
 
 ![Results from the example workflows](assets/ColorFix_example_workflows.png)
 
-Workflows behind the test grids above are in [`test_workflows/`](test_workflows), in API format. They use the older nodes.
+**Best settings found per model** for an unrelated reference, with `transfer_mode: adain` and `start_percent 0.15`. Each workflow's note lists them too.
+
+| Model | Sampler | `tile_mix` | `blur_radius_px` | Notes |
+|-------|---------|------------|------------------|-------|
+| FLUX.3 Klein | euler / simple, 30 steps, cfg 3.5 | `0.5` | `512` | `256` gives more object color and more traces of the reference |
+| Qwen Image 2512 | euler / simple, 50 steps, cfg 4, shift 3.1 | `0.5` | `256` | If a light backdrop in the reference pales your subject, use `tile_mix 0` |
+| FLUX.1 Dev | euler / simple, 20 steps, cfg 1.0, FluxGuidance 3.5 | `0.5` | `256` | Keep `tile_mix` above `0`: pure AdaIN gave a red face on the anime test |
+| Juggernaut XL v9 | dpmpp_2m / karras, 30 steps, cfg 5 | `0.5` | `256` | Other SDXL checkpoints are untested |
+
+These come from one seed and four references per model, comparing `tile_mix` `0`, `0.25` and `0.5`, so treat them as starting points. On FLUX.1, Juggernaut and Qwen Image, `256` was the largest radius tested.
+
+The full comparison, with the settings under every panel:
+
+![All models, references and modes](assets/ColorFix_all_models_comparison.png)
+
+The painted portrait shows the limit of AdaIN: on Klein and Juggernaut the hair stays mostly dark in every AdaIN panel, while tile mode turns it white and copies more of the reference. On FLUX.1 the hybrid reaches light grey hair, and on Qwen Image it adds iridescent streaks, where pure `adain` looks cleaner. The portrait ran on **ColorFix Patcher**, the other references on the older nodes at the same settings. Workflows: [`Klein`](test_workflows/FLUX3_klein_colorfix_portrait_api.json), [`FLUX.1`](test_workflows/FLUX1_dev_colorfix_portrait_api.json), [`Juggernaut`](test_workflows/SDXL_juggernaut_colorfix_portrait_api.json), [`Qwen Image`](test_workflows/Qwen_image_2512_colorfix_portrait_api.json).
+
+Workflows behind the test grids above are in [`test_workflows/`](test_workflows), in API format. Most use the older nodes.
 
 ---
 

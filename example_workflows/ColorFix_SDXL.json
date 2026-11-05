@@ -8,12 +8,12 @@
       "id": 1,
       "type": "MarkdownNote",
       "pos": [
-        40,
+        -460,
         40
       ],
       "size": [
-        420,
-        300
+        460,
+        620
       ],
       "flags": {},
       "order": 0,
@@ -24,7 +24,7 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "**ColorFix Patcher: unrelated reference**\n\nLoad any image as the color reference. The model keeps its own composition and takes the reference's palette.\n\n- `tile_mix` lower it, or set it to 0, if the reference's backdrop bleeds onto your subject\n- `blur_radius_px` lower it for stronger color, at the cost of more traces of the reference\n- `start_percent` higher keeps more of the model's own shapes\n\nAdaIN sets the palette of the whole frame, not the color of each object. Name object colors in the prompt if they matter.\n\nTry different seeds: the suggested settings come from tests on one seed."
+        "**ColorFix Patcher: unrelated reference**\n\nLoad any image as the color reference. The model keeps its own composition and takes the reference's palette.\n\n- `tile_mix` lower it, or set it to 0, if the reference's backdrop bleeds onto your subject\n- `blur_radius_px` lower it for stronger color, at the cost of more traces of the reference\n- `start_percent` higher keeps more of the model's own shapes\n\nAdaIN sets the palette of the whole frame, not the color of each object. Name object colors in the prompt if they matter.\n\nTry different seeds: the suggested settings come from tests on one seed.\n\n**Best settings found for Juggernaut XL v9** (one seed, four references)\n\n- Sampler: dpmpp_2m / karras, 30 steps, cfg 5\n- Unrelated reference: `adain`, `tile_mix 0.5`, `blur_radius_px 256`, `start_percent 0.15`\n- Tile mode: `blur_radius_px 192`, `start_percent 0`. Strong color, but it leaves patches\n\nOther SDXL checkpoints are untested."
       ],
       "title": "How to use"
     },

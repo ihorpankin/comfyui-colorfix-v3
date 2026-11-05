@@ -8,12 +8,12 @@
       "id": 1,
       "type": "MarkdownNote",
       "pos": [
-        40,
+        -460,
         40
       ],
       "size": [
-        420,
-        300
+        460,
+        620
       ],
       "flags": {},
       "order": 0,
@@ -24,7 +24,7 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "**ColorFix Patcher: img2img with tile mode**\n\nThe same image is the starting point and the color reference, so their layouts match. Tile mode keeps colors in place while the sampler redraws detail.\n\n- `denoise` on the KSampler sets how much is redrawn\n- `blur_radius_px` smaller holds colors more tightly\n\nThe Klein files are on Hugging Face in a repository that asks you to accept its terms and sign in before downloading."
+        "**ColorFix Patcher: img2img with tile mode**\n\nThe same image is the starting point and the color reference, so their layouts match. Tile mode keeps colors in place while the sampler redraws detail.\n\n- `denoise` on the KSampler sets how much is redrawn\n- `blur_radius_px` smaller holds colors more tightly\n\n**Settings used here** (a single run on FLUX.3 Klein, not a tested optimum)\n\n- Sampler: euler / simple, 30 steps, cfg 3.5, `denoise 0.6`\n- `tile`, `blur_radius_px 192`, `start_percent 0`\n\nThe Klein files are on Hugging Face in a repository that asks you to accept its terms and sign in before downloading."
       ],
       "title": "How to use"
     },
