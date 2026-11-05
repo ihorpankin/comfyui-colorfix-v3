@@ -70,6 +70,23 @@ def gaussian_blur(x: torch.Tensor, k: int) -> torch.Tensor:
     return y
 
 
+def radius_px_to_k(radius_px: int, downscale: int) -> int:
+    """
+    Convert a blur radius in image pixels to a radius in latent pixels.
+
+    One latent pixel covers `downscale` image pixels, and that factor varies by
+    model, so the same blur_k covers a different image area on each model.
+
+    Args:
+        radius_px: Blur radius in image pixels.
+        downscale: The model's spatial downscale factor (8, 16, 1, ...).
+
+    Returns:
+        Blur radius in latent pixels, at least 1.
+    """
+    return max(1, int(round(radius_px / max(1, downscale))))
+
+
 # Map dropdown strings to blur functions
 BLUR_MODE_MAP = {
     "box (A1111 original)": box_blur,

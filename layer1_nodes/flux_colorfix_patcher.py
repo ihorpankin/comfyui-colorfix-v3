@@ -13,7 +13,8 @@ via model.model.latent_format.process_in().
 
 Optional inputs: transfer_mode selects a global AdaIN transfer that
 carries no layout from the reference; tile_mix blends tile transfer over
-it; start_percent skips early steps; blur_k_start schedules the tile radius.
+it; start_percent skips early steps; blur_k_start schedules the tile radius;
+blur_radius_px sets the radius in image pixels instead of latent pixels.
 
 Workflow connection:
     Load Image → VAE Encode → [ref_latent] → FluxTileColorFixPatcher
@@ -22,7 +23,7 @@ Workflow connection:
 """
 
 from ..layer2_core import make_flux_colorfix_post_cfg_callback
-from ..layer2_core.blur import BLUR_MODE_MAP
+from ..layer2_core.blur import BLUR_MODE_MAP, radius_px_to_k
 from ..layer2_core.sampler_callback import TRANSFER_MODES, TRANSFER_TILE
 
 
@@ -118,6 +119,17 @@ class FluxTileColorFixPatcher:
                                "only very coarse color while composition forms. "
                                "0 = use blur_k throughout."
                 }),
+                "blur_radius_px": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 1024,
+                    "step": 8,
+                    "tooltip": "Blur radius in image pixels, converted using the model's "
+                               "latent downscale, so one value covers the same image area "
+                               "on every model. Overrides blur_k when above 0. "
+                               "192 = blur_k 24 on FLUX.1/SDXL, blur_k 12 on FLUX.3 Klein. "
+                               "blur_k_start stays in latent pixels."
+                }),
             },
         }
 
@@ -133,7 +145,8 @@ class FluxTileColorFixPatcher:
     )
 
     def apply(self, model, ref_latent, blur_k, weight, blur_mode,
-              transfer_mode=TRANSFER_TILE, tile_mix=0.0, start_percent=0.0, blur_k_start=0):
+              transfer_mode=TRANSFER_TILE, tile_mix=0.0, start_percent=0.0, blur_k_start=0,
+              blur_radius_px=0):
         # Clone the model to avoid modifying the original
         m = model.clone()
 
@@ -148,6 +161,9 @@ class FluxTileColorFixPatcher:
             # Models with a time axis in their latent format scale 5D tensors
             x0_origin = x0_origin.unsqueeze(2)
         x0_origin = latent_format.process_in(x0_origin)
+
+        if blur_radius_px and blur_radius_px > 0:
+            blur_k = radius_px_to_k(blur_radius_px, latent_format.spacial_downscale_ratio)
 
         # Resolve blur function from dropdown selection
         blur_fn = BLUR_MODE_MAP[blur_mode]

@@ -186,7 +186,17 @@ The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. The new inp
 | Juggernaut XL v9 | dpmpp_2m / karras, 30 steps, cfg 5 | Same pattern. Best gown of the three models: blue dress in nearly the same scene as the no-ColorFix result. `adain` and the hybrid still change the lighting, and the sweater's face goes cooler with the hybrid |
 | Qwen Image 2512 (`qwen_image_2512_fp8_e4m3fn`) | euler / simple, 50 steps, cfg 4, `ModelSamplingAuraFlow` shift 3.1 | Hybrid gave a blue gown and the closest anime palette, with pose and scene near the no-ColorFix result. On the sweater, pure `adain` is cleaner: with the hybrid, the left sleeve goes pale where the reference's backdrop was light |
 
-**`blur_k` is measured in latent pixels, so the same value covers a different image area per model.** FLUX.1, SDXL and Qwen Image 2512 downscale by 8, Klein by 16: `blur_k 24` on these models covers about the same area as `blur_k 12` on Klein. The `blur_k` ceiling of `32` on them therefore matches only `16` on Klein.
+**`blur_k` is measured in latent pixels, so the same value covers a different image area per model.** FLUX.1, SDXL and Qwen Image 2512 downscale by 8, Klein by 16: `blur_k 24` on these models covers about the same area as `blur_k 12` on Klein. The `blur_k` ceiling of `32` on them matches only `16` on Klein.
+
+`blur_radius_px` sets the radius in image pixels instead, and the node converts it using the model's downscale. Values matching the runs above:
+
+| Setting | `blur_radius_px` | Tested as |
+|---------|------------------|-----------|
+| Tile mode | `192` | `blur_k 24` on ×8 models, `blur_k 12` on Klein |
+| Hybrid | `256` | `blur_k 32` on ×8 models, `blur_k 16` on Klein |
+| Hybrid, softer on Klein | `512` | `blur_k 32` on Klein. Out of reach of `blur_k` on ×8 models and not yet tested there |
+
+The same radius gives comparable coverage, not identical results: each model still responds to the transfer in its own way. Conversion was checked on Klein and Qwen Image 2512, where a matching `blur_radius_px` reproduced the `blur_k` result pixel for pixel.
 
 These runs use one seed and three references per model, and Juggernaut is the only SDXL model tested. Base SDXL, anime fine-tunes and SD 1.5 are untested. Workflows (API format):
 
@@ -277,7 +287,8 @@ Load LoRA ───────────────────────�
 - `transfer_mode` — `tile (spatial)` (default), `adain (global)`, or `adain mean-only (global tone)`. With AdaIN, `blur_k`, `blur_mode` and `blur_k_start` apply only when `tile_mix` is above `0`
 - `tile_mix` — AdaIN modes: share of tile transfer blended over the AdaIN result (default `0.0`, try `0.5` with `blur_k 32`)
 - `start_percent` — skip the fix before this point of sampling (default `0.0`, try `0.15` with AdaIN)
-- `blur_k_start` — start the tile radius here and move linearly to `blur_k` by the end (default `0` = constant `blur_k`)
+- `blur_k_start` — start the tile radius here and move linearly to `blur_k` by the end (default `0` = constant `blur_k`). Stays in latent pixels
+- `blur_radius_px` — radius in image pixels, converted per model; overrides `blur_k` when above `0` (default `0`)
 
 ---
 
