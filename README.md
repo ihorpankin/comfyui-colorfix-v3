@@ -164,7 +164,7 @@ Compared with pure AdaIN, the model's pose and scene stay in place while object 
 
 | Setting | Effect |
 |---------|--------|
-| **`transfer_mode: adain`, `start_percent 0.15`, `tile_mix 0.5`, `blur_k 32`** | **Good starting point on all three models tested** |
+| **`transfer_mode: adain`, `start_percent 0.15`, `tile_mix 0.5`, `blur_k 32`** | **Good starting point on all four models tested.** If a light or dark reference backdrop bleeds onto your subject, lower `tile_mix` or set it to `0` |
 | Lower `blur_k` (Klein `16`) | Stronger color, more traces of the reference, such as a dark cloud above the sweater |
 | Lower `tile_mix` (`0.25`) | Closer to pure AdaIN, smaller effect |
 
@@ -172,26 +172,31 @@ Color still follows position in the frame, not objects. The gown's blue lands on
 
 ##### Other models
 
-The same comparison on FLUX.1 Dev and an SDXL fine-tune. The new inputs live on **Flux Tile ColorFix Patcher**, and that node also runs on SDXL despite its name; the `tile` column here uses the standard **Tile ColorFix Patcher**.
+The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. The new inputs live on **Flux Tile ColorFix Patcher**, and that node also runs on the other models despite its name; the SDXL `tile` column uses the standard **Tile ColorFix Patcher**.
 
 ![Tile, AdaIN and hybrid on FLUX.1 Dev](assets/FLUX1_dev_colorfix_hybrid.png)
 
 ![Tile, AdaIN and hybrid on Juggernaut XL v9](assets/SDXL_juggernaut_colorfix_hybrid.png)
 
+![Tile, AdaIN and hybrid on Qwen Image 2512](assets/Qwen_image_2512_colorfix_hybrid.png)
+
 | Model | Settings | Result |
 |-------|----------|--------|
 | FLUX.1 Dev (`flux1-dev-fp8`) | euler / simple, 20 steps, cfg 1.0, FluxGuidance 3.5 | Same pattern as Klein. Weaker object color (the gown only reaches slate blue), and pure AdaIN gave bright artifacts on the anime figure: red face and legs. The hybrid fixed the face; the legs stayed red |
 | Juggernaut XL v9 | dpmpp_2m / karras, 30 steps, cfg 5 | Same pattern. Best gown of the three models: blue dress in nearly the same scene as the no-ColorFix result. `adain` and the hybrid still change the lighting, and the sweater's face goes cooler with the hybrid |
+| Qwen Image 2512 (`qwen_image_2512_fp8_e4m3fn`) | euler / simple, 50 steps, cfg 4, `ModelSamplingAuraFlow` shift 3.1 | Hybrid gave a blue gown and the closest anime palette, with pose and scene near the no-ColorFix result. On the sweater, pure `adain` is cleaner: with the hybrid, the left sleeve goes pale where the reference's backdrop was light |
 
-**`blur_k` is measured in latent pixels, so the same value covers a different image area per model.** FLUX.1 and SDXL downscale by 8, Klein by 16: `blur_k 24` on these models covers about the same area as `blur_k 12` on Klein. The `blur_k` ceiling of `32` on FLUX.1 and SDXL therefore matches only `16` on Klein.
+**`blur_k` is measured in latent pixels, so the same value covers a different image area per model.** FLUX.1, SDXL and Qwen Image 2512 downscale by 8, Klein by 16: `blur_k 24` on these models covers about the same area as `blur_k 12` on Klein. The `blur_k` ceiling of `32` on them therefore matches only `16` on Klein.
 
 These runs use one seed and three references per model, and Juggernaut is the only SDXL model tested. Base SDXL, anime fine-tunes and SD 1.5 are untested. Workflows (API format):
 
-| Reference | FLUX.3 Klein | FLUX.1 Dev | Juggernaut XL |
-|-----------|--------------|------------|---------------|
-| Sweater | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_sweater_api.json) |
-| Gown | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_gown_api.json) |
-| Anime | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_anime_api.json) |
+| Reference | FLUX.3 Klein | FLUX.1 Dev | Juggernaut XL | Qwen Image 2512 |
+|-----------|--------------|------------|---------------|-----------------|
+| Sweater | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_sweater_api.json) |
+| Gown | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_gown_api.json) |
+| Anime | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_anime_api.json) |
+
+**Latents with a time axis:** Qwen Image uses a latent format with a time axis, so **Flux Tile ColorFix Patcher** treats each frame as its own image. Other models with the same format (Krea 2, JoyImage, Anima, Cosmos Predict2, Ming Image) and video models are untested; for video, only tensor shapes have been checked, not the visual result.
 
 #### Why not just delay tile mode?
 
@@ -268,7 +273,7 @@ Load LoRA ───────────────────────�
 - Encode the reference with the VAE that matches the model: Flux VAE for FLUX.1 (16 channels), `flux2-vae` for FLUX.3 Klein (128 channels)
 - `blur_k` and `weight` work the same as the SD/SDXL version
 
-**Optional inputs on Flux Tile ColorFix Patcher** (existing workflows keep their behavior; tested on FLUX.3 Klein, FLUX.1 Dev and Juggernaut XL v9):
+**Optional inputs on Flux Tile ColorFix Patcher** (existing workflows keep their behavior; tested on FLUX.3 Klein, FLUX.1 Dev, Juggernaut XL v9 and Qwen Image 2512):
 - `transfer_mode` — `tile (spatial)` (default), `adain (global)`, or `adain mean-only (global tone)`. With AdaIN, `blur_k`, `blur_mode` and `blur_k_start` apply only when `tile_mix` is above `0`
 - `tile_mix` — AdaIN modes: share of tile transfer blended over the AdaIN result (default `0.0`, try `0.5` with `blur_k 32`)
 - `start_percent` — skip the fix before this point of sampling (default `0.0`, try `0.15` with AdaIN)

@@ -117,6 +117,46 @@ def make_colorfix_post_cfg_callback(
     return post_cfg_callback
 
 
+def flatten_frames(x: torch.Tensor):
+    """
+    Fold the time axis of a 5D latent (B, C, T, H, W) into the batch.
+
+    Blur and statistics work on 4D tensors, so each frame is handled as its own
+    image. Image models using a video VAE (e.g. Wan-format latents) have T = 1.
+
+    Returns:
+        (4D tensor, shape to pass to unflatten_frames). The shape is None when
+        x is already 4D.
+    """
+    if x.ndim != 5:
+        return x, None
+    b, c, t, h, w = x.shape
+    return x.movedim(2, 1).reshape(b * t, c, h, w), (b, t)
+
+
+def unflatten_frames(x: torch.Tensor, shape) -> torch.Tensor:
+    """Undo flatten_frames."""
+    if shape is None:
+        return x
+    b, t = shape
+    return x.reshape(b, t, *x.shape[1:]).movedim(1, 2)
+
+
+def align_reference_frames(ref: torch.Tensor, target_frames: int) -> torch.Tensor:
+    """
+    Fold a reference latent to 4D with one image per target frame, or a single
+    image when it has one frame. A reference with a different frame count is
+    resampled to the nearest frames.
+    """
+    if ref.ndim != 5:
+        return ref
+    ref_frames = ref.shape[2]
+    if ref_frames not in (1, target_frames):
+        idx = torch.linspace(0, ref_frames - 1, target_frames, device=ref.device).round().long()
+        ref = ref.index_select(2, idx)
+    return flatten_frames(ref)[0]
+
+
 def make_sigma_to_percent(model_sampling, points: int = 201) -> Callable:
     """
     Build an inverse of model_sampling.percent_to_sigma() via a lookup table.
@@ -217,17 +257,20 @@ def make_flux_colorfix_post_cfg_callback(
                 t = (progress - start_percent) / span if span > 0 else 1.0
                 step_k = max(1, int(round(k_start + (k - k_start) * t)))
 
-        ref = match_size(x0_origin.to(denoised.device), denoised)
+        x, frame_shape = flatten_frames(denoised)
+        target_frames = frame_shape[1] if frame_shape is not None else 1
+        ref = align_reference_frames(x0_origin.to(x.device), target_frames)
+        ref = match_size(ref, x)
 
         if use_adain:
-            fixed = adain_swap(denoised, ref, match_std=adain_std)
+            fixed = adain_swap(x, ref, match_std=adain_std)
             if mix > 0.0:
                 fixed = fixed + mix * (color_swap(fixed, ref, step_k, blur_fn) - fixed)
         elif use_sharp:
-            fixed = color_swap_sharp_direct(denoised, ref, step_k, sharpness, blur_fn)
+            fixed = color_swap_sharp_direct(x, ref, step_k, sharpness, blur_fn)
         else:
-            fixed = color_swap(denoised, ref, step_k, blur_fn)
+            fixed = color_swap(x, ref, step_k, blur_fn)
 
-        return fixed * w + denoised * (1.0 - w)
+        return unflatten_frames(fixed * w + x * (1.0 - w), frame_shape)
 
     return post_cfg_callback

@@ -143,7 +143,11 @@ class FluxTileColorFixPatcher:
         # Scale reference to match Flux's internal latent space.
         # model.model.latent_format.process_in() handles the correct
         # scaling factor for Flux automatically.
-        x0_origin = model.model.latent_format.process_in(x0_origin)
+        latent_format = model.model.latent_format
+        if getattr(latent_format, "latent_dimensions", 2) == 3 and x0_origin.ndim == 4:
+            # Models with a time axis in their latent format scale 5D tensors
+            x0_origin = x0_origin.unsqueeze(2)
+        x0_origin = latent_format.process_in(x0_origin)
 
         # Resolve blur function from dropdown selection
         blur_fn = BLUR_MODE_MAP[blur_mode]
