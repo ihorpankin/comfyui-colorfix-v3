@@ -11,7 +11,7 @@ Modules:
 """
 
 from .blur import box_blur, gaussian_blur, BLUR_MODE_MAP
-from .color_swap import color_swap, color_swap_sharp, color_swap_sharp_direct
+from .color_swap import color_swap, color_swap_sharp, color_swap_sharp_direct, adain_swap
 from .sampler_callback import (
     make_colorfix_post_cfg_callback,
     make_flux_colorfix_post_cfg_callback,
@@ -25,6 +25,7 @@ __all__ = [
     "color_swap",
     "color_swap_sharp",
     "color_swap_sharp_direct",
+    "adain_swap",
     "make_colorfix_post_cfg_callback",
     "make_flux_colorfix_post_cfg_callback",
     "match_size",

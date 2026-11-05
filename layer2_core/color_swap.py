@@ -45,6 +45,47 @@ def color_swap(
     return x0_prd - blur_fn(x0_prd, k) + blur_fn(x0_origin, k)
 
 
+def adain_swap(
+    x0_prd: torch.Tensor,
+    x0_origin: torch.Tensor,
+    match_std: bool = True,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """
+    Global color transfer (AdaIN): match per-channel statistics, not positions.
+
+    Formula:
+        x0_fixed = (x0_prd - mean(x0_prd)) / std(x0_prd) * std(x0_origin) + mean(x0_origin)
+
+    Mean and std are taken over the spatial dims of each latent channel, so
+    the reference's palette and overall tone transfer while its layout does
+    not: nothing in the result depends on where a color sat in the reference.
+    Use it when the reference is a different picture from the generation.
+
+    Args:
+        x0_prd:    Predicted clean image in latent space. Shape (B, C, H, W).
+        x0_origin: Reference latent. Shape (B, C, H', W') — size may differ.
+        match_std: Also match per-channel spread (contrast / saturation).
+                   False = shift the mean only (tone only, keeps contrast).
+        eps:       Numerical floor for std.
+
+    Returns:
+        Latent with the prediction's structure and the reference's statistics.
+    """
+    dtype = x0_prd.dtype
+    x = x0_prd.float()
+    r = x0_origin.float()
+    mean_x = x.mean(dim=(2, 3), keepdim=True)
+    mean_r = r.mean(dim=(2, 3), keepdim=True)
+    if match_std:
+        std_x = x.std(dim=(2, 3), keepdim=True).clamp_min(eps)
+        std_r = r.std(dim=(2, 3), keepdim=True).clamp_min(eps)
+        out = (x - mean_x) / std_x * std_r + mean_r
+    else:
+        out = x - mean_x + mean_r
+    return out.to(dtype)
+
+
 def color_swap_sharp(
     x0_prd: torch.Tensor,
     x0_origin: torch.Tensor,

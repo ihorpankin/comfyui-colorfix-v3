@@ -11,6 +11,10 @@ The difference is that the callback always operates on args["denoised"]
 (no CFG splitting needed), and latent scaling is handled automatically
 via model.model.latent_format.process_in().
 
+Optional inputs: transfer_mode selects a global AdaIN transfer that
+carries no layout from the reference; start_percent skips early steps;
+blur_k_start schedules the tile radius.
+
 Workflow connection:
     Load Image → VAE Encode → [ref_latent] → FluxTileColorFixPatcher
     Load Diffusion Model (Flux) → [model] → FluxTileColorFixPatcher
@@ -19,6 +23,7 @@ Workflow connection:
 
 from ..layer2_core import make_flux_colorfix_post_cfg_callback
 from ..layer2_core.blur import BLUR_MODE_MAP
+from ..layer2_core.sampler_callback import TRANSFER_MODES, TRANSFER_TILE
 
 
 class FluxTileColorFixPatcher:
@@ -53,8 +58,9 @@ class FluxTileColorFixPatcher:
                     "step": 1,
                     "tooltip": "Blur kernel radius. "
                                "Controls frequency split point. "
-                               "Larger = more aggressive color transfer. "
-                               "k=8 → 17x17 kernel."
+                               "Smaller = stronger color but more of the reference's "
+                               "structure; larger = less of both. "
+                               "k=8 → 17x17 kernel. Tile mode only."
                 }),
                 "weight": ("FLOAT", {
                     "default": 1.0,
@@ -71,6 +77,38 @@ class FluxTileColorFixPatcher:
                                "Box = sharp cutoff, A1111 original."
                 }),
             },
+            "optional": {
+                "transfer_mode": (TRANSFER_MODES, {
+                    "default": TRANSFER_TILE,
+                    "tooltip": "tile = swap blurred colors in place: colors follow the "
+                               "reference's layout (best when reference and output share "
+                               "composition, e.g. img2img/upscale). "
+                               "adain = match each latent channel's mean and spread: "
+                               "palette and tone only, no reference shapes (best for an "
+                               "unrelated reference). mean-only = shift tone, keep contrast. "
+                               "blur_k / blur_mode / blur_k_start apply to tile only."
+                }),
+                "start_percent": ("FLOAT", {
+                    "default": 0.0,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.01,
+                    "tooltip": "Skip the color fix before this point of sampling. "
+                               "Early steps decide composition; 0.1-0.2 keeps the "
+                               "model's own pose and shapes instead of the reference's. "
+                               "0.0 = fix from the first step."
+                }),
+                "blur_k_start": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 64,
+                    "step": 1,
+                    "tooltip": "Blur radius at the first fixed step, moving linearly "
+                               "to blur_k by the end. A large value (e.g. 32) passes "
+                               "only very coarse color while composition forms. "
+                               "0 = use blur_k throughout."
+                }),
+            },
         }
 
     RETURN_TYPES = ("MODEL",)
@@ -84,7 +122,8 @@ class FluxTileColorFixPatcher:
         "Works with FLUX.1 and FLUX.3 Klein (no CFG dependency)."
     )
 
-    def apply(self, model, ref_latent, blur_k, weight, blur_mode):
+    def apply(self, model, ref_latent, blur_k, weight, blur_mode,
+              transfer_mode=TRANSFER_TILE, start_percent=0.0, blur_k_start=0):
         # Clone the model to avoid modifying the original
         m = model.clone()
 
@@ -106,7 +145,11 @@ class FluxTileColorFixPatcher:
             k=blur_k,
             weight=weight,
             sharpness=0.0,  # Base variant — no sharpening
-            blur_fn=blur_fn
+            blur_fn=blur_fn,
+            start_percent=start_percent,
+            k_start=blur_k_start,
+            model_sampling=m.get_model_object("model_sampling"),
+            transfer_mode=transfer_mode,
         )
 
         # Register the callback on the model

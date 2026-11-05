@@ -29,7 +29,16 @@ ComfyUI custom node extension implementing the **tile_colorfix** algorithm from 
 
 ### FLUX.3 Klein Tests
 
-`blur_k` is a trade-off: smaller values transfer color more strongly but also leak the reference's structure; larger values keep the model's own composition but transfer less color. Two references, same sweep — both point to **`blur_k = 12`** as the starting point, with `8` for stronger color and `4` leaking structure in both cases.
+`blur_k` is a trade-off: smaller values transfer color more strongly but also leak the reference's structure; larger values leak less but transfer less color. Four references (painting, anime, two photos), same seed and settings:
+
+| blur_k | Across all four tests |
+|--------|-----------------------|
+| `4` | Always leaks the reference's structure — in the photo tests it practically re-draws the reference |
+| `8` | Strongest color, faint structure traces (tested on 1–2 only) |
+| **`12`–`16`** | **Best range for tile mode:** full palette and no direct copying, but the pose, framing or layout can still drift toward the reference. Start at `12`; if traces of the reference still show, go to `16` |
+| `24`–`32` | Color weakens and the composition drifts back toward the no-ColorFix result |
+
+If the reference is a different picture and the model's own composition matters more than exact object colors, use [AdaIN mode](#keeping-the-models-geometry-adain) instead.
 
 #### Test 1 — painterly portrait
 
@@ -71,7 +80,7 @@ The prompt doesn't mention any colors, so every color difference from the "No Co
 | No ColorFix | Beige coat, light hair, white backdrop with a grey circle |
 | `blur_k = 4` | Structure leaks in: the reference's olive arc on the right, a blotch at the shoulder, a ghost hand at the waist |
 | `blur_k = 8` | Strongest color (plum coat, darker hair, pink backdrop, olive floor), the reference arc only faintly visible |
-| `blur_k = 12` | **Best balance:** full palette, no reference structure, the circle is the model's own |
+| `blur_k = 12` | **Best balance:** full palette and the model's figure, but the backdrop follows the reference's pink-and-olive layout and the circle shrinks to a thin line |
 | `blur_k = 16` | Same palette, coat slightly lighter |
 | `blur_k = 24` | Coat drifts toward brown, backdrop stays pink |
 | `blur_k = 32` | Reddish-brown coat, pink backdrop still there |
@@ -82,7 +91,72 @@ Unlike Test 1, color carries over even at `blur_k = 32`: this reference is made 
 
 Reproduce with [`workflows/FLUX3_klein_colorfix_test2_api.json`](workflows/FLUX3_klein_colorfix_test2_api.json) (put the reference image into ComfyUI's `input` folder under that filename, or change the `LoadImage` node).
 
-Both tests use one seed each, so treat `blur_k = 12` as a starting point, not a fixed rule.
+#### Test 3 — photo, single saturated color
+
+![FLUX.3 Klein ColorFix test 3](assets/FLUX3_klein_colorfix_test3.png)
+
+| Panel | Result |
+|-------|--------|
+| Reference | Royal-blue satin gown, dark wet stairs, cold vertical light strips |
+| No ColorFix | Champagne ruched gown, warm concrete |
+| `blur_k = 4` | Practically re-draws the reference: same pose, light strips and dress cut |
+| `blur_k = 12` | **Best:** deep blue gown and cold blue corridor, no direct copying, but the tiered dress and back-wall light strips drift toward the reference |
+| `blur_k = 16` | Nearly identical to 12 |
+| `blur_k = 32` | Pale icy-blue gown; the no-ColorFix dress design comes back |
+
+Reference `fashion_portrait_blue_silk_gown_vis.png`, 896×1152, prompt *Fashion editorial photograph of a woman with short cropped hair and visor sunglasses wearing a voluminous ruffled satin ball gown, standing on a staircase in a concrete corridor lit by vertical light strips, full body, dramatic lighting*. Workflow: [`workflows/FLUX3_klein_colorfix_test3_api.json`](workflows/FLUX3_klein_colorfix_test3_api.json).
+
+#### Test 4 — photo, muted color on a gradient
+
+![FLUX.3 Klein ColorFix test 4](assets/FLUX3_klein_colorfix_test4.png)
+
+| Panel | Result |
+|-------|--------|
+| Reference | Teal quarter-zip sweater, grey-blue gradient backdrop |
+| No ColorFix | Khaki knit sweater, light grey backdrop |
+| `blur_k = 4` | Copies the reference's pose and framing |
+| `blur_k = 12` | Teal sweater and gradient, but a dark patch by the hair — a trace of the reference's hair. The head still turns toward the reference's pose |
+| `blur_k = 16` | **Best:** same palette, the patch is gone; the pose still follows the reference |
+| `blur_k = 32` | Still teal, but the backdrop turns hazy and the left sleeve blends into it |
+
+Reference `portrait_model_denim.png`, 896×1152, prompt *Studio fashion photograph of a young man with short curly hair wearing a textured quarter-zip sweater with embossed curved seams, side profile, head tilted down, plain gradient studio backdrop, soft directional light*. Workflow: [`workflows/FLUX3_klein_colorfix_test4_api.json`](workflows/FLUX3_klein_colorfix_test4_api.json).
+
+Each test uses a single seed, so treat `12`–`16` as a starting range, not a fixed rule.
+
+### Keeping the Model's Geometry: AdaIN
+
+Tile mode transfers color by position: whatever was in the top left of the reference ends up in the top left of the result. That suits img2img and upscaling, where both share a composition. With an unrelated reference, the composition either follows the reference or the colors land in the wrong places.
+
+`transfer_mode: adain (global)` on **Flux Tile ColorFix Patcher** matches each latent channel's overall mean and spread instead, so no position information from the reference is used:
+
+```
+x0_fixed = (x0_prd - mean(x0_prd)) / std(x0_prd) * std(x0_ref) + mean(x0_ref)
+```
+
+![Tile vs AdaIN on three references](assets/FLUX3_klein_colorfix_compare.png)
+
+| Mode | Composition | Color |
+|------|-------------|-------|
+| `tile`, `blur_k` 12 | Pose, dress or backdrop layout drift toward the reference | Closest to the reference, including object colors: blue gown, plum coat |
+| `adain`, from the first step | No reference silhouette or layout, but the image still changes: the gown's design differs from the no-ColorFix result | Overall palette only; gown turns silver-blue, coat brown |
+| **`adain`, `start_percent` 0.15** | **Closest to the no-ColorFix result** of the modes compared; not identical (the anime figure's stride changes) | Recognizable palette, especially the anime backdrop. Object colors still don't follow the reference: the gown stays gold |
+
+**Which to use:** `tile` when the reference and the output share a composition or exact object colors matter most; `adain` with `start_percent` around `0.15` when the reference is a different picture and the composition matters most.
+
+**AdaIN limitations:**
+- It sets the palette of the whole frame, not what color each object gets, so a blue dress in the reference doesn't produce a blue dress. Color can land on the wrong things: the anime figure's legs turn crimson in the AdaIN panels here.
+- `weight 0.7` gave mixed results: on the sweater it stayed closer to the no-ColorFix framing than `weight 1.0`, on the anime reference it mostly muted the color. Adding it to `start_percent 0.15` (anime only) changed little. `adain mean-only` shifts tone without matching contrast, and came out darker on both photo references.
+- These results come from three references and a single seed, so treat them as a starting point.
+
+Full grids: [sweater](assets/FLUX3_klein_colorfix_adain_sweater.png), [gown](assets/FLUX3_klein_colorfix_adain_gown.png), [anime](assets/FLUX3_klein_colorfix_adain_anime.png). Workflows: [`sweater`](workflows/FLUX3_klein_colorfix_adain_sweater_api.json), [`gown`](workflows/FLUX3_klein_colorfix_adain_gown_api.json), [`anime`](workflows/FLUX3_klein_colorfix_adain_anime_api.json). Prompts and references are the same as in Tests 2–4, with the same sampler settings.
+
+#### Why not just delay tile mode?
+
+`start_percent` and `blur_k_start` also work in tile mode, but on their own they don't solve this. On the sweater reference they kept the model's pose, while the reference's light background and dark figure appeared over it like a double exposure. `blur_k 4` with `start_percent 0.2` pulled the pose back toward the reference.
+
+![Delayed tile mode on the sweater reference](assets/FLUX3_klein_colorfix_geometry.png)
+
+Workflow: [`workflows/FLUX3_klein_colorfix_geometry_api.json`](workflows/FLUX3_klein_colorfix_geometry_api.json).
 
 ---
 
@@ -102,14 +176,14 @@ Both tests use one seed each, so treat `blur_k = 12` as a starting point, not a 
 
 | Node | Description |
 |------|-------------|
-| `Flux Tile ColorFix Patcher` | Base tile_colorfix for Flux models (FLUX.1 16-channel and FLUX.3 Klein 128-channel latents). |
+| `Flux Tile ColorFix Patcher` | Base tile_colorfix for Flux models (FLUX.1 16-channel and FLUX.3 Klein 128-channel latents). Optional inputs add a global [AdaIN mode](#keeping-the-models-geometry-adain) and control when the fix starts. |
 | `Flux Tile ColorFix+Sharp Patcher` | Color correction + direct sharpening for Flux models. |
 | `Apply Ultimate ControlNet (FLUX)` | Apply single ControlNet with Flux-adapted control modes. |
 | `Apply Ultimate Multi-ControlNet (FLUX)` | Apply a multi-ControlNet stack to conditioning (Flux). |
 
 > **Note:** The Flux nodes work with FLUX.1 (Dev, Schnell) and FLUX.3 Klein. The algorithm operates on latent tensors via ComfyUI's model patching API and does not depend on the channel count, so any Flux-based model that runs through KSampler is supported.
 >
-> FLUX.3 Klein uses the Flux2 latent format (128 channels, 16× spatial downscale vs 8× for FLUX.1). Start around `blur_k=12`: lower values (`4`–`8`) pass some of the reference's structure along with its colors, higher values (`16`+) keep the model's composition but transfer less color. See the [FLUX.3 Klein tests](#flux3-klein-tests) above.
+> FLUX.3 Klein uses the Flux2 latent format (128 channels, 16× spatial downscale vs 8× for FLUX.1). In tile mode, use `blur_k` `12`–`16` (start at `12`, raise to `16` if the reference's shapes still show through): lower values (`4`–`8`) pass the reference's structure along with its colors, `24`+ transfers less color. See the [FLUX.3 Klein tests](#flux3-klein-tests) above.
 
 ---
 
@@ -151,6 +225,11 @@ Load LoRA ───────────────────────�
 - Encode the reference with the VAE that matches the model: Flux VAE for FLUX.1 (16 channels), `flux2-vae` for FLUX.3 Klein (128 channels)
 - `blur_k` and `weight` work the same as the SD/SDXL version
 
+**Optional inputs on Flux Tile ColorFix Patcher** (existing workflows keep their behavior; FLUX.3 Klein is the only model these were tested on):
+- `transfer_mode` — `tile (spatial)` (default), `adain (global)`, or `adain mean-only (global tone)`. `blur_k`, `blur_mode` and `blur_k_start` apply to tile mode only
+- `start_percent` — skip the fix before this point of sampling (default `0.0`, try `0.15` with AdaIN)
+- `blur_k_start` — tile mode: start from this radius and move linearly to `blur_k` by the end (default `0` = constant `blur_k`)
+
 ---
 
 ## Installation
@@ -174,7 +253,7 @@ The **tile_colorfix** algorithm splits an image into low-frequency (color/tone) 
 - **Color swap** — reference low-freq replaces generated low-freq
 - **High frequency preserved** — AI-generated texture and detail remain untouched
 
-This is a port of the original A1111 implementation to native ComfyUI model patching via `set_model_sampler_post_cfg_function`.
+This is a port of the original A1111 implementation to native ComfyUI model patching via `set_model_sampler_post_cfg_function`. The Flux patcher's optional [AdaIN mode](#keeping-the-models-geometry-adain) uses the same patching point but matches global statistics instead of swapping frequencies.
 
 ---
 
@@ -195,6 +274,6 @@ comfyui-colorfix-v3/
 │   └── flux_controlnet_multi_apply.py
 └── layer2_core/          # Internal algorithm
     ├── blur.py           # Box / Gaussian blur kernels
-    ├── color_swap.py     # Low-frequency color transfer
+    ├── color_swap.py     # Low-frequency color transfer, AdaIN
     └── sampler_callback.py  # Post-CFG callback factory
 ```
