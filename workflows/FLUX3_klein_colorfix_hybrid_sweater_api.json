@@ -1,0 +1,363 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "flux3-image-klein-base-bf16.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_4b_int8_convrot.safetensors",
+      "type": "flux3",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "text": "Studio fashion photograph of a young man with short curly hair wearing a textured quarter-zip sweater with embossed curved seams, side profile, head tilted down, plain gradient studio backdrop, soft directional light"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "text": ""
+    }
+  },
+  "6": {
+    "class_type": "EmptyFlux2LatentImage",
+    "inputs": {
+      "width": 896,
+      "height": 1152,
+      "batch_size": 1
+    }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "portrait_model_denim.png"
+    }
+  },
+  "11": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "10",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 896,
+      "height": 1152,
+      "crop": "center"
+    }
+  },
+  "12": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "11",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "30": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 16,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.25,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "31": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "30",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 30,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "32": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "31",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "33": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "32",
+        0
+      ],
+      "filename_prefix": "colorfix_hybrid4/h1_mix25_k16"
+    }
+  },
+  "40": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 16,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.5,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "41": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "40",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 30,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "42": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "41",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "colorfix_hybrid4/h2_mix50_k16"
+    }
+  },
+  "50": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 32,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.25,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "51": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "50",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 30,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "52": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "51",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "53": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "52",
+        0
+      ],
+      "filename_prefix": "colorfix_hybrid4/h3_mix25_k32"
+    }
+  },
+  "60": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 32,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.5,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "61": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "60",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 30,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "62": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "61",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "63": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "62",
+        0
+      ],
+      "filename_prefix": "colorfix_hybrid4/h4_mix50_k32"
+    }
+  }
+}

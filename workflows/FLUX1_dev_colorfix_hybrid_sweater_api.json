@@ -1,0 +1,408 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "flux1-dev-fp8.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "1",
+        1
+      ],
+      "text": "Studio fashion photograph of a young man with short curly hair wearing a textured quarter-zip sweater with embossed curved seams, side profile, head tilted down, plain gradient studio backdrop, soft directional light"
+    }
+  },
+  "7": {
+    "class_type": "FluxGuidance",
+    "inputs": {
+      "conditioning": [
+        "4",
+        0
+      ],
+      "guidance": 3.5
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "1",
+        1
+      ],
+      "text": ""
+    }
+  },
+  "6": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 896,
+      "height": 1152,
+      "batch_size": 1
+    }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "portrait_model_denim.png"
+    }
+  },
+  "11": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "10",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 896,
+      "height": 1152,
+      "crop": "center"
+    }
+  },
+  "12": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "11",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "31": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "7",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "32": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "31",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "33": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "32",
+        0
+      ],
+      "filename_prefix": "colorfix_flux1_4/f0_baseline"
+    }
+  },
+  "40": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 24,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "tile (spatial)",
+      "tile_mix": 0.0,
+      "start_percent": 0.0,
+      "blur_k_start": 0
+    }
+  },
+  "41": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "40",
+        0
+      ],
+      "positive": [
+        "7",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "42": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "41",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "colorfix_flux1_4/f1_tile_k24"
+    }
+  },
+  "50": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 32,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.0,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "51": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "50",
+        0
+      ],
+      "positive": [
+        "7",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "52": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "51",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "53": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "52",
+        0
+      ],
+      "filename_prefix": "colorfix_flux1_4/f2_adain_s15"
+    }
+  },
+  "60": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 32,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.25,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "61": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "60",
+        0
+      ],
+      "positive": [
+        "7",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "62": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "61",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "63": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "62",
+        0
+      ],
+      "filename_prefix": "colorfix_flux1_4/f3_mix25_k32"
+    }
+  },
+  "70": {
+    "class_type": "FluxTileColorFixPatcher",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "ref_latent": [
+        "12",
+        0
+      ],
+      "blur_k": 32,
+      "weight": 1.0,
+      "blur_mode": "gaussian (smoother)",
+      "transfer_mode": "adain (global)",
+      "tile_mix": 0.5,
+      "start_percent": 0.15,
+      "blur_k_start": 0
+    }
+  },
+  "71": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "70",
+        0
+      ],
+      "positive": [
+        "7",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 42,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "72": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "71",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    }
+  },
+  "73": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "72",
+        0
+      ],
+      "filename_prefix": "colorfix_flux1_4/f4_mix50_k32"
+    }
+  }
+}

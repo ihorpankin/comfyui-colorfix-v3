@@ -12,8 +12,8 @@ The difference is that the callback always operates on args["denoised"]
 via model.model.latent_format.process_in().
 
 Optional inputs: transfer_mode selects a global AdaIN transfer that
-carries no layout from the reference; start_percent skips early steps;
-blur_k_start schedules the tile radius.
+carries no layout from the reference; tile_mix blends tile transfer over
+it; start_percent skips early steps; blur_k_start schedules the tile radius.
 
 Workflow connection:
     Load Image → VAE Encode → [ref_latent] → FluxTileColorFixPatcher
@@ -86,7 +86,17 @@ class FluxTileColorFixPatcher:
                                "adain = match each latent channel's mean and spread: "
                                "palette and tone only, no reference shapes (best for an "
                                "unrelated reference). mean-only = shift tone, keep contrast. "
-                               "blur_k / blur_mode / blur_k_start apply to tile only."
+                               "With adain, blur_k / blur_mode / blur_k_start apply only "
+                               "when tile_mix is above 0."
+                }),
+                "tile_mix": ("FLOAT", {
+                    "default": 0.0,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.01,
+                    "tooltip": "adain modes only. Share of tile transfer blended over "
+                               "the adain result. Higher = color closer to the reference's "
+                               "positions, but more of its layout. 0 = pure adain."
                 }),
                 "start_percent": ("FLOAT", {
                     "default": 0.0,
@@ -123,7 +133,7 @@ class FluxTileColorFixPatcher:
     )
 
     def apply(self, model, ref_latent, blur_k, weight, blur_mode,
-              transfer_mode=TRANSFER_TILE, start_percent=0.0, blur_k_start=0):
+              transfer_mode=TRANSFER_TILE, tile_mix=0.0, start_percent=0.0, blur_k_start=0):
         # Clone the model to avoid modifying the original
         m = model.clone()
 
@@ -150,6 +160,7 @@ class FluxTileColorFixPatcher:
             k_start=blur_k_start,
             model_sampling=m.get_model_object("model_sampling"),
             transfer_mode=transfer_mode,
+            tile_mix=tile_mix,
         )
 
         # Register the callback on the model

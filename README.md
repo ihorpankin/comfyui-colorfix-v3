@@ -141,7 +141,7 @@ x0_fixed = (x0_prd - mean(x0_prd)) / std(x0_prd) * std(x0_ref) + mean(x0_ref)
 | `adain`, from the first step | No reference silhouette or layout, but the image still changes: the gown's design differs from the no-ColorFix result | Overall palette only; gown turns silver-blue, coat brown |
 | **`adain`, `start_percent` 0.15** | **Closest to the no-ColorFix result** of the modes compared; not identical (the anime figure's stride changes) | Recognizable palette, especially the anime backdrop. Object colors still don't follow the reference: the gown stays gold |
 
-**Which to use:** `tile` when the reference and the output share a composition or exact object colors matter most; `adain` with `start_percent` around `0.15` when the reference is a different picture and the composition matters most.
+**Which to use:** `tile` when the reference and the output share a composition or exact object colors matter most; `adain` with `start_percent` around `0.15` when the reference is a different picture and the composition matters most; add [`tile_mix`](#hybrid-adain--tile-tile_mix) for a middle ground.
 
 **AdaIN limitations:**
 - It sets the palette of the whole frame, not what color each object gets, so a blue dress in the reference doesn't produce a blue dress. Color can land on the wrong things: the anime figure's legs turn crimson in the AdaIN panels here.
@@ -149,6 +149,49 @@ x0_fixed = (x0_prd - mean(x0_prd)) / std(x0_prd) * std(x0_ref) + mean(x0_ref)
 - These results come from three references and a single seed, so treat them as a starting point.
 
 Full grids: [sweater](assets/FLUX3_klein_colorfix_adain_sweater.png), [gown](assets/FLUX3_klein_colorfix_adain_gown.png), [anime](assets/FLUX3_klein_colorfix_adain_anime.png). Workflows: [`sweater`](workflows/FLUX3_klein_colorfix_adain_sweater_api.json), [`gown`](workflows/FLUX3_klein_colorfix_adain_gown_api.json), [`anime`](workflows/FLUX3_klein_colorfix_adain_anime_api.json). Prompts and references are the same as in Tests 2–4, with the same sampler settings.
+
+#### Hybrid: AdaIN + tile (`tile_mix`)
+
+`tile_mix` blends a share of tile transfer over the AdaIN result, so the palette comes from AdaIN and some color follows the reference's positions:
+
+```
+x0_fixed = adain + tile_mix * (tile(adain, blur_k) - adain)
+```
+
+![AdaIN + tile hybrid on FLUX.3 Klein](assets/FLUX3_klein_colorfix_hybrid.png)
+
+Compared with pure AdaIN, the model's pose and scene stay in place while object colors move toward the reference: the gown's skirt turns blue. The cost is faint traces of the reference's layout: part of the sweater goes pale where the reference's backdrop was light, and an olive band from the reference's floor crosses the anime backdrop.
+
+| Setting | Effect |
+|---------|--------|
+| **`transfer_mode: adain`, `start_percent 0.15`, `tile_mix 0.5`, `blur_k 32`** | **Good starting point on all three models tested** |
+| Lower `blur_k` (Klein `16`) | Stronger color, more traces of the reference, such as a dark cloud above the sweater |
+| Lower `tile_mix` (`0.25`) | Closer to pure AdaIN, smaller effect |
+
+Color still follows position in the frame, not objects. The gown's blue lands on the skirt because the reference's blue occupies a similar area; where the two layouts differ more, color can land on the wrong thing.
+
+##### Other models
+
+The same comparison on FLUX.1 Dev and an SDXL fine-tune. The new inputs live on **Flux Tile ColorFix Patcher**, and that node also runs on SDXL despite its name; the `tile` column here uses the standard **Tile ColorFix Patcher**.
+
+![Tile, AdaIN and hybrid on FLUX.1 Dev](assets/FLUX1_dev_colorfix_hybrid.png)
+
+![Tile, AdaIN and hybrid on Juggernaut XL v9](assets/SDXL_juggernaut_colorfix_hybrid.png)
+
+| Model | Settings | Result |
+|-------|----------|--------|
+| FLUX.1 Dev (`flux1-dev-fp8`) | euler / simple, 20 steps, cfg 1.0, FluxGuidance 3.5 | Same pattern as Klein. Weaker object color (the gown only reaches slate blue), and pure AdaIN gave bright artifacts on the anime figure: red face and legs. The hybrid fixed the face; the legs stayed red |
+| Juggernaut XL v9 | dpmpp_2m / karras, 30 steps, cfg 5 | Same pattern. Best gown of the three models: blue dress in nearly the same scene as the no-ColorFix result. `adain` and the hybrid still change the lighting, and the sweater's face goes cooler with the hybrid |
+
+**`blur_k` is measured in latent pixels, so the same value covers a different image area per model.** FLUX.1 and SDXL downscale by 8, Klein by 16: `blur_k 24` on these models covers about the same area as `blur_k 12` on Klein. The `blur_k` ceiling of `32` on FLUX.1 and SDXL therefore matches only `16` on Klein.
+
+These runs use one seed and three references per model, and Juggernaut is the only SDXL model tested. Base SDXL, anime fine-tunes and SD 1.5 are untested. Workflows (API format):
+
+| Reference | FLUX.3 Klein | FLUX.1 Dev | Juggernaut XL |
+|-----------|--------------|------------|---------------|
+| Sweater | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_sweater_api.json) |
+| Gown | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_gown_api.json) |
+| Anime | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_anime_api.json) |
 
 #### Why not just delay tile mode?
 
@@ -176,7 +219,7 @@ Workflow: [`workflows/FLUX3_klein_colorfix_geometry_api.json`](workflows/FLUX3_k
 
 | Node | Description |
 |------|-------------|
-| `Flux Tile ColorFix Patcher` | Base tile_colorfix for Flux models (FLUX.1 16-channel and FLUX.3 Klein 128-channel latents). Optional inputs add a global [AdaIN mode](#keeping-the-models-geometry-adain) and control when the fix starts. |
+| `Flux Tile ColorFix Patcher` | Base tile_colorfix for Flux models (FLUX.1 16-channel and FLUX.3 Klein 128-channel latents). Optional inputs add a global [AdaIN mode](#keeping-the-models-geometry-adain), an AdaIN + tile hybrid, and control over when the fix starts. |
 | `Flux Tile ColorFix+Sharp Patcher` | Color correction + direct sharpening for Flux models. |
 | `Apply Ultimate ControlNet (FLUX)` | Apply single ControlNet with Flux-adapted control modes. |
 | `Apply Ultimate Multi-ControlNet (FLUX)` | Apply a multi-ControlNet stack to conditioning (Flux). |
@@ -225,10 +268,11 @@ Load LoRA ───────────────────────�
 - Encode the reference with the VAE that matches the model: Flux VAE for FLUX.1 (16 channels), `flux2-vae` for FLUX.3 Klein (128 channels)
 - `blur_k` and `weight` work the same as the SD/SDXL version
 
-**Optional inputs on Flux Tile ColorFix Patcher** (existing workflows keep their behavior; FLUX.3 Klein is the only model these were tested on):
-- `transfer_mode` — `tile (spatial)` (default), `adain (global)`, or `adain mean-only (global tone)`. `blur_k`, `blur_mode` and `blur_k_start` apply to tile mode only
+**Optional inputs on Flux Tile ColorFix Patcher** (existing workflows keep their behavior; tested on FLUX.3 Klein, FLUX.1 Dev and Juggernaut XL v9):
+- `transfer_mode` — `tile (spatial)` (default), `adain (global)`, or `adain mean-only (global tone)`. With AdaIN, `blur_k`, `blur_mode` and `blur_k_start` apply only when `tile_mix` is above `0`
+- `tile_mix` — AdaIN modes: share of tile transfer blended over the AdaIN result (default `0.0`, try `0.5` with `blur_k 32`)
 - `start_percent` — skip the fix before this point of sampling (default `0.0`, try `0.15` with AdaIN)
-- `blur_k_start` — tile mode: start from this radius and move linearly to `blur_k` by the end (default `0` = constant `blur_k`)
+- `blur_k_start` — start the tile radius here and move linearly to `blur_k` by the end (default `0` = constant `blur_k`)
 
 ---
 

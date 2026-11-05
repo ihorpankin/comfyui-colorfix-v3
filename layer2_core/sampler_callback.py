@@ -153,6 +153,7 @@ def make_flux_colorfix_post_cfg_callback(
     k_start: int = 0,
     model_sampling=None,
     transfer_mode: str = TRANSFER_TILE,
+    tile_mix: float = 0.0,
 ):
     """
     Factory for Flux post-CFG callback (direct sharpening, no CFG dependency).
@@ -180,7 +181,11 @@ def make_flux_colorfix_post_cfg_callback(
         transfer_mode: TRANSFER_TILE (default) swaps low frequencies in place,
                     so colors follow the reference's layout. TRANSFER_ADAIN /
                     TRANSFER_ADAIN_MEAN match global per-channel statistics,
-                    so no layout transfers; k, k_start and sharpness are unused.
+                    so no layout transfers; sharpness is unused, and k and
+                    k_start are used only when tile_mix > 0.
+        tile_mix:   AdaIN modes only. Share of tile transfer (radius k) blended
+                    over the AdaIN result, 0-1: adds position-based color and,
+                    with it, some of the reference's layout. Default 0.0.
 
     Returns:
         A callback function compatible with model.set_model_sampler_post_cfg_function().
@@ -190,7 +195,9 @@ def make_flux_colorfix_post_cfg_callback(
     start_percent = max(0.0, min(1.0, start_percent or 0.0))
     use_adain = transfer_mode in (TRANSFER_ADAIN, TRANSFER_ADAIN_MEAN)
     adain_std = transfer_mode == TRANSFER_ADAIN
-    use_schedule = (not use_adain) and k_start is not None and k_start > 0 and k_start != k
+    mix = max(0.0, min(1.0, tile_mix or 0.0)) if use_adain else 0.0
+    uses_k = (not use_adain) or mix > 0.0
+    use_schedule = uses_k and k_start is not None and k_start > 0 and k_start != k
 
     sigma_to_percent = None
     if (start_percent > 0.0 or use_schedule) and model_sampling is not None:
@@ -214,6 +221,8 @@ def make_flux_colorfix_post_cfg_callback(
 
         if use_adain:
             fixed = adain_swap(denoised, ref, match_std=adain_std)
+            if mix > 0.0:
+                fixed = fixed + mix * (color_swap(fixed, ref, step_k, blur_fn) - fixed)
         elif use_sharp:
             fixed = color_swap_sharp_direct(denoised, ref, step_k, sharpness, blur_fn)
         else:
