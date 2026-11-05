@@ -68,7 +68,7 @@ If the reference is a different picture and the model's own composition matters 
 | Prompt | *Digital painting portrait of a young woman with short bob haircut, wearing a fur coat, one hand raised to her lips, looking at the viewer, loose expressive brush strokes, close-up* |
 | Negative prompt | empty |
 
-The prompt doesn't mention any colors, so every color difference from the "No ColorFix" panel comes from ColorFix. Reproduce with [`workflows/FLUX3_klein_colorfix_test_api.json`](workflows/FLUX3_klein_colorfix_test_api.json) (API format; put `reference.png` into ComfyUI's `input` folder first).
+The prompt doesn't mention any colors, so every color difference from the "No ColorFix" panel comes from ColorFix. Reproduce with [`test_workflows/FLUX3_klein_colorfix_test_api.json`](test_workflows/FLUX3_klein_colorfix_test_api.json) (API format; put `reference.png` into ComfyUI's `input` folder first).
 
 #### Test 2 — anime full body, flat color areas
 
@@ -89,7 +89,7 @@ Same settings as Test 1 except: **768×1120**, reference `418421c125d9448d0d7d47
 
 Unlike Test 1, color carries over even at `blur_k = 32`: this reference is made of large flat color areas (backdrop, floor), which live almost entirely in the low frequencies that ColorFix transfers. References with more fine detail lose color faster as `blur_k` grows.
 
-Reproduce with [`workflows/FLUX3_klein_colorfix_test2_api.json`](workflows/FLUX3_klein_colorfix_test2_api.json) (put the reference image into ComfyUI's `input` folder under that filename, or change the `LoadImage` node).
+Reproduce with [`test_workflows/FLUX3_klein_colorfix_test2_api.json`](test_workflows/FLUX3_klein_colorfix_test2_api.json) (put the reference image into ComfyUI's `input` folder under that filename, or change the `LoadImage` node).
 
 #### Test 3 — photo, single saturated color
 
@@ -104,7 +104,7 @@ Reproduce with [`workflows/FLUX3_klein_colorfix_test2_api.json`](workflows/FLUX3
 | `blur_k = 16` | Nearly identical to 12 |
 | `blur_k = 32` | Pale icy-blue gown; the no-ColorFix dress design comes back |
 
-Reference `fashion_portrait_blue_silk_gown_vis.png`, 896×1152, prompt *Fashion editorial photograph of a woman with short cropped hair and visor sunglasses wearing a voluminous ruffled satin ball gown, standing on a staircase in a concrete corridor lit by vertical light strips, full body, dramatic lighting*. Workflow: [`workflows/FLUX3_klein_colorfix_test3_api.json`](workflows/FLUX3_klein_colorfix_test3_api.json).
+Reference `fashion_portrait_blue_silk_gown_vis.png`, 896×1152, prompt *Fashion editorial photograph of a woman with short cropped hair and visor sunglasses wearing a voluminous ruffled satin ball gown, standing on a staircase in a concrete corridor lit by vertical light strips, full body, dramatic lighting*. Workflow: [`test_workflows/FLUX3_klein_colorfix_test3_api.json`](test_workflows/FLUX3_klein_colorfix_test3_api.json).
 
 #### Test 4 — photo, muted color on a gradient
 
@@ -119,7 +119,7 @@ Reference `fashion_portrait_blue_silk_gown_vis.png`, 896×1152, prompt *Fashion 
 | `blur_k = 16` | **Best:** same palette, the patch is gone; the pose still follows the reference |
 | `blur_k = 32` | Still teal, but the backdrop turns hazy and the left sleeve blends into it |
 
-Reference `portrait_model_denim.png`, 896×1152, prompt *Studio fashion photograph of a young man with short curly hair wearing a textured quarter-zip sweater with embossed curved seams, side profile, head tilted down, plain gradient studio backdrop, soft directional light*. Workflow: [`workflows/FLUX3_klein_colorfix_test4_api.json`](workflows/FLUX3_klein_colorfix_test4_api.json).
+Reference `portrait_model_denim.png`, 896×1152, prompt *Studio fashion photograph of a young man with short curly hair wearing a textured quarter-zip sweater with embossed curved seams, side profile, head tilted down, plain gradient studio backdrop, soft directional light*. Workflow: [`test_workflows/FLUX3_klein_colorfix_test4_api.json`](test_workflows/FLUX3_klein_colorfix_test4_api.json).
 
 Each test uses a single seed, so treat `12`–`16` as a starting range, not a fixed rule.
 
@@ -148,7 +148,7 @@ x0_fixed = (x0_prd - mean(x0_prd)) / std(x0_prd) * std(x0_ref) + mean(x0_ref)
 - `weight 0.7` gave mixed results: on the sweater it stayed closer to the no-ColorFix framing than `weight 1.0`, on the anime reference it mostly muted the color. Adding it to `start_percent 0.15` (anime only) changed little. `adain mean-only` shifts tone without matching contrast, and came out darker on both photo references.
 - These results come from three references and a single seed, so treat them as a starting point.
 
-Full grids: [sweater](assets/FLUX3_klein_colorfix_adain_sweater.png), [gown](assets/FLUX3_klein_colorfix_adain_gown.png), [anime](assets/FLUX3_klein_colorfix_adain_anime.png). Workflows: [`sweater`](workflows/FLUX3_klein_colorfix_adain_sweater_api.json), [`gown`](workflows/FLUX3_klein_colorfix_adain_gown_api.json), [`anime`](workflows/FLUX3_klein_colorfix_adain_anime_api.json). Prompts and references are the same as in Tests 2–4, with the same sampler settings.
+Full grids: [sweater](assets/FLUX3_klein_colorfix_adain_sweater.png), [gown](assets/FLUX3_klein_colorfix_adain_gown.png), [anime](assets/FLUX3_klein_colorfix_adain_anime.png). Workflows: [`sweater`](test_workflows/FLUX3_klein_colorfix_adain_sweater_api.json), [`gown`](test_workflows/FLUX3_klein_colorfix_adain_gown_api.json), [`anime`](test_workflows/FLUX3_klein_colorfix_adain_anime_api.json). Prompts and references are the same as in Tests 2–4, with the same sampler settings.
 
 #### Hybrid: AdaIN + tile (`tile_mix`)
 
@@ -202,9 +202,9 @@ These runs use one seed and three references per model, and Juggernaut is the on
 
 | Reference | FLUX.3 Klein | FLUX.1 Dev | Juggernaut XL | Qwen Image 2512 |
 |-----------|--------------|------------|---------------|-----------------|
-| Sweater | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_sweater_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_sweater_api.json) |
-| Gown | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_gown_api.json) |
-| Anime | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_anime_api.json) |
+| Sweater | [`workflow`](test_workflows/FLUX3_klein_colorfix_hybrid_sweater_api.json) | [`workflow`](test_workflows/FLUX1_dev_colorfix_hybrid_sweater_api.json) | [`workflow`](test_workflows/SDXL_juggernaut_colorfix_hybrid_sweater_api.json) | [`workflow`](test_workflows/Qwen_image_2512_colorfix_hybrid_sweater_api.json) |
+| Gown | [`workflow`](test_workflows/FLUX3_klein_colorfix_hybrid_gown_api.json) | [`workflow`](test_workflows/FLUX1_dev_colorfix_hybrid_gown_api.json) | [`workflow`](test_workflows/SDXL_juggernaut_colorfix_hybrid_gown_api.json) | [`workflow`](test_workflows/Qwen_image_2512_colorfix_hybrid_gown_api.json) |
+| Anime | [`workflow`](test_workflows/FLUX3_klein_colorfix_hybrid_anime_api.json) | [`workflow`](test_workflows/FLUX1_dev_colorfix_hybrid_anime_api.json) | [`workflow`](test_workflows/SDXL_juggernaut_colorfix_hybrid_anime_api.json) | [`workflow`](test_workflows/Qwen_image_2512_colorfix_hybrid_anime_api.json) |
 
 **Latents with a time axis:** Qwen Image uses a latent format with a time axis, so the node treats each frame as its own image. Other models with the same format (Krea 2, JoyImage, Anima, Cosmos Predict2, Ming Image) and video models are untested; for video, only tensor shapes have been checked, not the visual result.
 
@@ -214,7 +214,7 @@ These runs use one seed and three references per model, and Juggernaut is the on
 
 ![Delayed tile mode on the sweater reference](assets/FLUX3_klein_colorfix_geometry.png)
 
-Workflow: [`workflows/FLUX3_klein_colorfix_geometry_api.json`](workflows/FLUX3_klein_colorfix_geometry_api.json).
+Workflow: [`test_workflows/FLUX3_klein_colorfix_geometry_api.json`](test_workflows/FLUX3_klein_colorfix_geometry_api.json).
 
 ---
 
@@ -248,6 +248,24 @@ Workflow: [`workflows/FLUX3_klein_colorfix_geometry_api.json`](workflows/FLUX3_k
 > **Note:** The Flux nodes work with FLUX.1 (Dev, Schnell) and FLUX.3 Klein. The algorithm operates on latent tensors via ComfyUI's model patching API and does not depend on the channel count, so any Flux-based model that runs through KSampler is supported.
 >
 > FLUX.3 Klein uses the Flux2 latent format (128 channels, 16× spatial downscale vs 8× for FLUX.1). In tile mode, use `blur_k` `12`–`16` (start at `12`, raise to `16` if the reference's shapes still show through): lower values (`4`–`8`) pass the reference's structure along with its colors, `24`+ transfers less color. See the [FLUX.3 Klein tests](#flux3-klein-tests) above.
+
+---
+
+## Example Workflows
+
+Ready-to-load workflows with **ColorFix Patcher** are in [`example_workflows/`](example_workflows). They also appear in ComfyUI's template browser under this extension. Put `reference.png` from [`assets/`](assets/reference.png) in ComfyUI's `input` folder, or load your own image.
+
+| Workflow | Use it for | Status |
+|----------|------------|--------|
+| [`ColorFix_FLUX3_Klein`](example_workflows/ColorFix_FLUX3_Klein.json) | FLUX.3 Klein, unrelated reference | Run |
+| [`ColorFix_img2img_tile_FLUX3_Klein`](example_workflows/ColorFix_img2img_tile_FLUX3_Klein.json) | img2img, reference and output share a composition | Run |
+| [`ColorFix_Qwen_Image_2512`](example_workflows/ColorFix_Qwen_Image_2512.json) | Qwen Image 2512, unrelated reference | Run |
+| [`ColorFix_FLUX1_Dev`](example_workflows/ColorFix_FLUX1_Dev.json) | FLUX.1 Dev, unrelated reference | Graph validated, not run with this node |
+| [`ColorFix_SDXL`](example_workflows/ColorFix_SDXL.json) | SDXL, unrelated reference | Graph validated, not run with this node |
+
+![Results from the example workflows](assets/ColorFix_example_workflows.png)
+
+Workflows behind the test grids above are in [`test_workflows/`](test_workflows), in API format. They use the older nodes.
 
 ---
 
