@@ -137,7 +137,9 @@ class FluxTileColorFixPatcher:
     RETURN_NAMES = ("model",)
     FUNCTION = "apply"
     CATEGORY = "colorfix-v3/flux"
+    DEPRECATED = True  # Replaced by ColorFixPatcher; kept so saved workflows still load
     DESCRIPTION = (
+        "Deprecated: use ColorFix Patcher. "
         "Patches Flux model with tile_colorfix color correction. "
         "Swaps low-frequency colors from reference image into generation "
         "while preserving AI-generated detail. "

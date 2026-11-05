@@ -90,7 +90,9 @@ class FluxTileColorFixSharpPatcher:
     RETURN_NAMES = ("model",)
     FUNCTION = "apply"
     CATEGORY = "colorfix-v3/flux"
+    DEPRECATED = True  # Replaced by ColorFixPatcher; kept so saved workflows still load
     DESCRIPTION = (
+        "Deprecated: use ColorFix Patcher in tile mode with sharpness. "
         "Patches Flux model with tile_colorfix + direct sharpening. "
         "Same color correction as FluxTileColorFixPatcher but adds "
         "detail enhancement via high-pass boost (unsharp mask). "

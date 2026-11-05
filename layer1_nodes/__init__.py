@@ -4,6 +4,9 @@ Layer 1 — Visible ComfyUI Nodes
 These are the nodes that appear on the ComfyUI canvas. They configure
 the colorfix pipeline and patch the model with the appropriate callback.
 
+Any image model:
+    ColorFixPatcher          — Tile, AdaIN or hybrid color transfer
+
 SD/SDXL Nodes:
     TileColorFixPatcher      — Base tile_colorfix (color swap only)
     TileColorFixSharpPatcher — tile_colorfix+sharp (color swap + detail via CFG)
@@ -18,6 +21,7 @@ Flux Nodes:
     FluxMultiControlNetApply     — Apply multi-ControlNet stack (Flux)
 """
 
+from .colorfix_universal_patcher import ColorFixPatcher
 from .colorfix_patcher import TileColorFixPatcher
 from .colorfix_sharp_patcher import TileColorFixSharpPatcher
 from .controlnet_apply import ControlNetTileApply
@@ -29,6 +33,7 @@ from .flux_controlnet_apply import FluxControlNetTileApply
 from .flux_controlnet_multi_apply import FluxMultiControlNetApply
 
 __all__ = [
+    "ColorFixPatcher",
     "TileColorFixPatcher",
     "TileColorFixSharpPatcher",
     "ControlNetTileApply",

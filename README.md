@@ -127,7 +127,7 @@ Each test uses a single seed, so treat `12`–`16` as a starting range, not a fi
 
 Tile mode transfers color by position: whatever was in the top left of the reference ends up in the top left of the result. That suits img2img and upscaling, where both share a composition. With an unrelated reference, the composition either follows the reference or the colors land in the wrong places.
 
-`transfer_mode: adain (global)` on **Flux Tile ColorFix Patcher** matches each latent channel's overall mean and spread instead, so no position information from the reference is used:
+`transfer_mode: adain (global)` on **ColorFix Patcher** matches each latent channel's overall mean and spread instead, so no position information from the reference is used:
 
 ```
 x0_fixed = (x0_prd - mean(x0_prd)) / std(x0_prd) * std(x0_ref) + mean(x0_ref)
@@ -172,7 +172,7 @@ Color still follows position in the frame, not objects. The gown's blue lands on
 
 ##### Other models
 
-The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. The new inputs live on **Flux Tile ColorFix Patcher**, and that node also runs on the other models despite its name; the SDXL `tile` column uses the standard **Tile ColorFix Patcher**.
+The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. These runs used the now deprecated **Flux Tile ColorFix Patcher**, plus **Tile ColorFix Patcher** for the SDXL `tile` column. **ColorFix Patcher** reproduces the Klein and Qwen Image results pixel for pixel at the matching radius; it has not been run on FLUX.1 or SDXL.
 
 ![Tile, AdaIN and hybrid on FLUX.1 Dev](assets/FLUX1_dev_colorfix_hybrid.png)
 
@@ -188,7 +188,7 @@ The same comparison on FLUX.1 Dev, an SDXL fine-tune and Qwen Image. The new inp
 
 **`blur_k` is measured in latent pixels, so the same value covers a different image area per model.** FLUX.1, SDXL and Qwen Image 2512 downscale by 8, Klein by 16: `blur_k 24` on these models covers about the same area as `blur_k 12` on Klein. The `blur_k` ceiling of `32` on them matches only `16` on Klein.
 
-`blur_radius_px` sets the radius in image pixels instead, and the node converts it using the model's downscale. Values matching the runs above:
+`blur_radius_px` on **ColorFix Patcher** sets the radius in image pixels instead, and the node converts it using the model's downscale. Values matching the runs above:
 
 | Setting | `blur_radius_px` | Tested as |
 |---------|------------------|-----------|
@@ -206,7 +206,7 @@ These runs use one seed and three references per model, and Juggernaut is the on
 | Gown | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_gown_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_gown_api.json) |
 | Anime | [`workflow`](workflows/FLUX3_klein_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/FLUX1_dev_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/SDXL_juggernaut_colorfix_hybrid_anime_api.json) | [`workflow`](workflows/Qwen_image_2512_colorfix_hybrid_anime_api.json) |
 
-**Latents with a time axis:** Qwen Image uses a latent format with a time axis, so **Flux Tile ColorFix Patcher** treats each frame as its own image. Other models with the same format (Krea 2, JoyImage, Anima, Cosmos Predict2, Ming Image) and video models are untested; for video, only tensor shapes have been checked, not the visual result.
+**Latents with a time axis:** Qwen Image uses a latent format with a time axis, so the node treats each frame as its own image. Other models with the same format (Krea 2, JoyImage, Anima, Cosmos Predict2, Ming Image) and video models are untested; for video, only tensor shapes have been checked, not the visual result.
 
 #### Why not just delay tile mode?
 
@@ -219,6 +219,12 @@ Workflow: [`workflows/FLUX3_klein_colorfix_geometry_api.json`](workflows/FLUX3_k
 ---
 
 ## Nodes
+
+### Any image model
+
+| Node | Description |
+|------|-------------|
+| `ColorFix Patcher` | **Start here.** Tile, [AdaIN or hybrid](#keeping-the-models-geometry-adain) color transfer, with the blur radius set in image pixels so one value carries across models. Run on FLUX.3 Klein and Qwen Image 2512; not yet on FLUX.1, SDXL or other models. |
 
 ### SD / SDXL
 
@@ -234,8 +240,8 @@ Workflow: [`workflows/FLUX3_klein_colorfix_geometry_api.json`](workflows/FLUX3_k
 
 | Node | Description |
 |------|-------------|
-| `Flux Tile ColorFix Patcher` | Base tile_colorfix for Flux models (FLUX.1 16-channel and FLUX.3 Klein 128-channel latents). Optional inputs add a global [AdaIN mode](#keeping-the-models-geometry-adain), an AdaIN + tile hybrid, and control over when the fix starts. |
-| `Flux Tile ColorFix+Sharp Patcher` | Color correction + direct sharpening for Flux models. |
+| `Flux Tile ColorFix Patcher` | **Deprecated, use `ColorFix Patcher`.** Saved workflows keep working. |
+| `Flux Tile ColorFix+Sharp Patcher` | **Deprecated, use `ColorFix Patcher`** in tile mode with `sharpness`. Saved workflows keep working. |
 | `Apply Ultimate ControlNet (FLUX)` | Apply single ControlNet with Flux-adapted control modes. |
 | `Apply Ultimate Multi-ControlNet (FLUX)` | Apply a multi-ControlNet stack to conditioning (Flux). |
 
@@ -269,26 +275,29 @@ Load Checkpoint (SDXL) ───────────────────
 ## Workflow 2 — Flux (Dev / Schnell / Klein) + ColorFix + ControlNet + LoRA
 
 ```
-Load Image ──► VAE Encode (Flux) ──► FluxTileColorFixPatcher ──► KSampler
-Load Checkpoint (Flux) ─────────────────────────────────────────► KSampler
-Load LoRA ──────────────────────────────────────────────────────► KSampler
+Load Image ──► VAE Encode (Flux) ──► ColorFixPatcher ──► KSampler
+Load Checkpoint (Flux) ─────────────────────────────────► KSampler
+Load LoRA ──────────────────────────────────────────────► KSampler
 ```
 
 **Nodes used:**
-- `Load Image` → `VAE Encode` (Flux VAE) → connect to `ref_latent` on **Flux Tile ColorFix Patcher**
-- `Load Checkpoint` → `Load LoRA` → connect `MODEL` to **Flux Tile ColorFix Patcher**
-- **Flux Tile ColorFix Patcher** → patched `MODEL` → **KSampler**
+- `Load Image` → `VAE Encode` (Flux VAE) → connect to `ref_latent` on **ColorFix Patcher**
+- `Load Checkpoint` → `Load LoRA` → connect `MODEL` to **ColorFix Patcher**
+- **ColorFix Patcher** → patched `MODEL` → **KSampler**
 
-**Key parameters:**
-- Encode the reference with the VAE that matches the model: Flux VAE for FLUX.1 (16 channels), `flux2-vae` for FLUX.3 Klein (128 channels)
-- `blur_k` and `weight` work the same as the SD/SDXL version
+Encode the reference with the VAE that matches the model: Flux VAE for FLUX.1 (16 channels), `flux2-vae` for FLUX.3 Klein (128 channels).
 
-**Optional inputs on Flux Tile ColorFix Patcher** (existing workflows keep their behavior; tested on FLUX.3 Klein, FLUX.1 Dev, Juggernaut XL v9 and Qwen Image 2512):
-- `transfer_mode` — `tile (spatial)` (default), `adain (global)`, or `adain mean-only (global tone)`. With AdaIN, `blur_k`, `blur_mode` and `blur_k_start` apply only when `tile_mix` is above `0`
-- `tile_mix` — AdaIN modes: share of tile transfer blended over the AdaIN result (default `0.0`, try `0.5` with `blur_k 32`)
-- `start_percent` — skip the fix before this point of sampling (default `0.0`, try `0.15` with AdaIN)
-- `blur_k_start` — start the tile radius here and move linearly to `blur_k` by the end (default `0` = constant `blur_k`). Stays in latent pixels
-- `blur_radius_px` — radius in image pixels, converted per model; overrides `blur_k` when above `0` (default `0`)
+**ColorFix Patcher inputs** (defaults are the settings for an unrelated reference; for img2img or upscaling, use `tile (spatial)` with `start_percent 0`):
+- `transfer_mode` — `adain (global)` (default), `tile (spatial)`, or `adain mean-only (global tone)`
+- `blur_radius_px` — radius in image pixels, converted per model (default `256`, try `192` in tile mode). Used by tile mode and `tile_mix`
+- `weight` — color fix strength (default `1.0`)
+- `tile_mix` — AdaIN modes: share of tile transfer blended over the AdaIN result (default `0.5`; lower it if the reference's backdrop bleeds onto your subject)
+- `start_percent` — skip the fix before this point of sampling (default `0.15`)
+- `blur_mode` — `gaussian (smoother)` (default) or `box (A1111 original)`
+- `blur_radius_start_px` — optional: start the radius here and move linearly to `blur_radius_px` by the end (default `0` = constant)
+- `sharpness` — optional, tile mode only: direct high-pass detail boost (default `0.0`)
+
+Older workflows with **Flux Tile ColorFix Patcher** keep working. That node also has the optional inputs `transfer_mode`, `tile_mix`, `start_percent`, `blur_k_start` and `blur_radius_px`, the last of which overrides `blur_k`.
 
 ---
 
@@ -313,7 +322,7 @@ The **tile_colorfix** algorithm splits an image into low-frequency (color/tone) 
 - **Color swap** — reference low-freq replaces generated low-freq
 - **High frequency preserved** — AI-generated texture and detail remain untouched
 
-This is a port of the original A1111 implementation to native ComfyUI model patching via `set_model_sampler_post_cfg_function`. The Flux patcher's optional [AdaIN mode](#keeping-the-models-geometry-adain) uses the same patching point but matches global statistics instead of swapping frequencies.
+This is a port of the original A1111 implementation to native ComfyUI model patching via `set_model_sampler_post_cfg_function`. **ColorFix Patcher**'s [AdaIN mode](#keeping-the-models-geometry-adain) uses the same patching point but matches global statistics instead of swapping frequencies.
 
 ---
 
@@ -323,6 +332,7 @@ This is a port of the original A1111 implementation to native ComfyUI model patc
 comfyui-colorfix-v3/
 ├── __init__.py           # Node registration
 ├── layer1_nodes/         # ComfyUI-visible nodes (model patchers)
+│   ├── colorfix_universal_patcher.py
 │   ├── colorfix_patcher.py
 │   ├── colorfix_sharp_patcher.py
 │   ├── controlnet_apply.py

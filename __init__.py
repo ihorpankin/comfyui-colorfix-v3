@@ -10,6 +10,9 @@ Architecture:
     layer1_nodes/  — Visible ComfyUI nodes (model patchers)
     layer2_core/   — Internal algorithm (blur, color swap, sampler callbacks)
 
+Any image model:
+    ColorFixPatcher          — Tile, AdaIN or hybrid color transfer
+
 SD/SDXL Nodes:
     TileColorFixPatcher      — Base color correction (swaps colors from reference)
     TileColorFixSharpPatcher — Color correction + detail enhancement via CFG
@@ -18,19 +21,20 @@ SD/SDXL Nodes:
     MultiControlNetApply     — Apply multi-ControlNet stack (SD/SDXL)
 
 Flux Nodes:
-    FluxTileColorFixPatcher      — Base color correction for Flux models
-    FluxTileColorFixSharpPatcher — Color correction + direct detail enhancement
-    FluxControlNetTileApply      — Apply ControlNet with Flux-adapted control modes
+    FluxTileColorFixPatcher      — Deprecated, use ColorFixPatcher
+    FluxTileColorFixSharpPatcher — Deprecated, use ColorFixPatcher
+    FluxControlNetTileApply     — Apply ControlNet with Flux-adapted control modes
     FluxMultiControlNetApply     — Apply multi-ControlNet stack (Flux)
 
 Usage (SD/SDXL):
     Load Image → VAE Encode → TileColorFixPatcher → KSampler
 
-Usage (Flux):
-    Load Image → VAE Encode (Flux VAE) → FluxTileColorFixPatcher → KSampler
+Usage (any image model):
+    Load Image → VAE Encode → ColorFixPatcher → KSampler
 """
 
 from .layer1_nodes import (
+    ColorFixPatcher,
     TileColorFixPatcher,
     TileColorFixSharpPatcher,
     ControlNetTileApply,
@@ -44,6 +48,7 @@ from .layer1_nodes import (
 
 # ComfyUI node registration
 NODE_CLASS_MAPPINGS = {
+    "ColorFixPatcher": ColorFixPatcher,
     "TileColorFixPatcher": TileColorFixPatcher,
     "TileColorFixSharpPatcher": TileColorFixSharpPatcher,
     "ControlNetTileApply": ControlNetTileApply,
@@ -56,6 +61,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "ColorFixPatcher": "ColorFix Patcher",
     "TileColorFixPatcher": "Tile ColorFix Patcher",
     "TileColorFixSharpPatcher": "Tile ColorFix+Sharp Patcher",
     "ControlNetTileApply": "Apply Ultimate ControlNet",
